@@ -10,7 +10,7 @@ MacBookPro (or similar macOS device)
 1. Starting LocalStack
 Run LocalStack in detached mode:
 
-CopyRun
+
 localstack start -d
 You should see the LocalStack logo and status messages indicating services are starting.
 
@@ -34,25 +34,23 @@ CopyRun
 awslocal sqs create-queue --queue-name sample-queue
 This creates a sample SQS queue:
 
-CopyRun
+
 {
     "QueueUrl": "http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/sample-queue"
 }
+
 4. Initialize Terraform with LocalStack
 Make sure your Terraform backend and providers are configured to point to LocalStack endpoints. Then, initialize your project:
 
-CopyRun
 tflocal init
 You should see confirmation of successful initialization.
 
 5. Plan and Apply Infrastructure Changes
 Run a plan:
 
-CopyRun
 tflocal plan
 Review the planned actions, then execute:
 
-CopyRun
 tflocal apply
 Confirm with yes when prompted.
 
@@ -61,13 +59,12 @@ This creates resources defined in your Terraform configuration, such as S3 bucke
 6. Verify Resources
 List your S3 buckets:
 
-CopyRun
 awslocal s3 ls
 You should see your buckets listed, e.g.:
 
-CopyRun
 2025-08-05 00:49:26 my-awesome-local-bucket
 Troubleshooting Tips
+
 Parse errors in Zsh: Ensure you’re not accidentally double-typing commands with % symbols or incomplete commands.
 Service status issues: Restart LocalStack if some services aren’t available.
 Resource creation failures: Confirm your AWS CLI commands target the correct LocalStack endpoints.
