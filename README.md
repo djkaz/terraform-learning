@@ -1,55 +1,165 @@
-# Learning Terraform: A Simple Guide for Beginners
+# LocalStack Terraform Infrastructure
 
-Welcome! This project is here to help anyone (even if you’re not a technical expert) start learning about Terraform, a tool that lets you describe and manage your cloud resources using simple files — like a recipe for building your digital world.
+This repository contains Terraform configuration for deploying AWS infrastructure locally using LocalStack. It creates a complete VPC setup with EC2 instance, IAM roles, and S3 bucket for development and testing purposes.
 
-## What is Terraform?
+## Overview
 
-Terraform is a tool that helps you “write down” what you want your cloud setup to look like (for example, a server, a database, or a user account) in easy-to-read files. Then, with just a couple of commands, Terraform builds or updates your setup automatically. 
+This Terraform configuration provisions the following AWS resources in LocalStack:
 
-Think of it like writing instructions for a LEGO set, and then having a robot build it for you!
+- **VPC** with CIDR block `10.0.0.0/16`
+- **Subnet** with CIDR block `10.0.1.0/24` in availability zone `us-east-1a`
+- **Security Group** allowing SSH access on port 22
+- **IAM Role** with S3 read-only access for EC2 instances
+- **IAM Instance Profile** for EC2 role assumption
+- **EC2 Instance** (t2.micro) with the IAM instance profile attached
+- **S3 Bucket** named `localstack-bucket`
 
-## Who is This For?
+## Prerequisites
 
-- **Beginners and Non-Technical Users:** No coding experience required.  
-- **Aspiring DevOps Engineers:** Anyone curious about cloud technology and automation.
-- **Students or Career Changers:** Want to see how modern tech teams manage their cloud resources? Start here!
+Before using this configuration, ensure you have the following installed:
 
-## What Will You Learn Here?
+- [Terraform](https://www.terraform.io/downloads.html) (>= 0.12)
+- [LocalStack](https://docs.localstack.cloud/getting-started/installation/)
+- [tflocal](https://github.com/localstack/terraform-local) - Terraform wrapper for LocalStack
+- [AWS CLI](https://aws.amazon.com/cli/) (optional, for testing)
 
-- **The Basics:** What Terraform does, and how it works.
-- **Step-by-Step Examples:** How to create and manage cloud resources using simple text files.
-- **Safe Testing:** How to try things out on your own computer, risk-free, using a tool called LocalStack (this pretends to be the cloud, but nothing leaves your machine).
-- **How to Check Your Work:** How to see what you’ve created and make sure it matches your expectations.
+## Setup
 
-## How to Get Started
+### 1. Start LocalStack
 
-1. **Install a Few Free Tools:**  
-   - [Docker](https://www.docker.com/) (lets you run LocalStack, our pretend cloud)
-   - [Terraform](https://www.terraform.io/downloads.html) (the main tool we’re learning)
-   - [LocalStack](https://github.com/localstack/localstack) (optional, but great for practice)
+Start LocalStack with the required services:
 
-2. **Download this Project:**  
-   Click the “Code” button above and select “Download ZIP” or use Git to clone it if you know how.
+```bash
+localstack start
+```
 
-3. **Follow the Examples:**  
-   - Inside, you’ll find clear instructions and example files.
-   - Each folder is a small lesson — you can read and try them in order or just pick one that sounds interesting.
+Or using Docker:
 
-## Why Should You Try Terraform?
+```bash
+docker run --rm -it -p 4566:4566 localstack/localstack
+```
 
-- **No Guesswork:** Write down what you want, and Terraform makes it happen.
-- **Easy to Repeat:** Need the same setup again? Just run the same files.
-- **Team Friendly:** Share your setup with others — everyone is on the same page.
-- **Save Time and Avoid Mistakes:** Automation means fewer “oops!” moments.
+### 2. Install tflocal
 
-## Helpful Resources
+Install the Terraform LocalStack wrapper:
 
-- [Official Terraform Docs](https://www.terraform.io/docs)
-- [LocalStack Docs](https://docs.localstack.cloud/)
-- [Beginner-Friendly Terraform Guide](https://learn.hashicorp.com/terraform)
+```bash
+pip install terraform-local
+```
 
----
+### 3. Initialize Terraform
 
-**Tip:** Don’t worry if it seems new or strange at first. Take it step by step, try things out, and have fun! If you get stuck, search online or ask for help — the community is friendly and there are lots of guides.
+Initialize the Terraform working directory:
 
-Happy learning!
+```bash
+tflocal init
+```
+
+## Usage
+
+### Deploy Infrastructure
+
+To deploy the infrastructure:
+
+```bash
+tflocal plan
+tflocal apply
+```
+
+When prompted, type `yes` to confirm the deployment.
+
+### Verify Deployment
+
+After successful deployment, you can verify the resources using AWS CLI with LocalStack endpoint:
+
+```bash
+# List EC2 instances
+aws --endpoint-url=http://localhost:4566 ec2 describe-instances
+
+# List S3 buckets
+aws --endpoint-url=http://localhost:4566 s3 ls
+
+# List IAM roles
+aws --endpoint-url=http://localhost:4566 iam list-roles
+```
+
+### Test IAM Role Assumption
+
+You can test the IAM role assumption functionality:
+
+```bash
+aws --endpoint-url=http://localhost:4566 sts assume-role \
+  --role-arn arn:aws:iam::123456789012:role/localstack-ec2-role \
+  --role-session-name test-session
+```
+
+### Destroy Infrastructure
+
+To clean up and destroy all resources:
+
+```bash
+tflocal destroy
+```
+
+## Configuration Details
+
+### Provider Configuration
+
+The AWS provider is configured to work with LocalStack:
+
+- **Region**: `us-east-1`
+- **Credentials**: Test credentials (`test`/`test`)
+- **Endpoints**: All services point to `http://localhost:4566`
+- **Validation**: Skipped for LocalStack compatibility
+
+### Security Configuration
+
+- **VPC**: Isolated network environment
+- **Security Group**: Allows SSH (port 22) from anywhere (0.0.0.0/0)
+- **IAM Role**: EC2 instances have read-only access to S3
+
+### Resource Tags
+
+All resources are tagged with descriptive names prefixed with `localstack-` for easy identification.
+
+## Important Notes
+
+1. **AMI ID**: The EC2 instance uses AMI `ami-0c55b159cbfafe1f0`. This is a placeholder and may need to be updated based on your LocalStack version.
+
+2. **Security**: This configuration is for development/testing only. The security group allows SSH access from anywhere, which is not recommended for production environments.
+
+3. **LocalStack Limitations**: Some AWS features may have limitations in LocalStack compared to actual AWS services.
+
+## Troubleshooting
+
+### Common Issues
+
+1. **LocalStack not running**: Ensure LocalStack is started and accessible on port 4566
+2. **tflocal command not found**: Install terraform-local using `pip install terraform-local`
+3. **AMI not found**: Update the AMI ID in the EC2 instance resource if needed
+
+### Logs
+
+Check LocalStack logs for any service-specific issues:
+
+```bash
+localstack logs
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test with LocalStack
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Additional Resources
+
+- [LocalStack Documentation](https://docs.localstack.cloud/)
+- [Terraform AWS Provider Documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [tflocal GitHub Repository](https://github.com/localstack/terraform-local)
